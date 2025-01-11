@@ -5,7 +5,7 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import pandas as pd
 import re
-
+from sklearn.feature_extraction.text import CountVectorizer
 text = pd.read_csv("Data/DataScience/KNN/train.txt", delimiter=";", names=["sentence", "feelings"])
 print(text.head())
 print(text.info())
@@ -33,3 +33,28 @@ def remover(data):
     return list
 transform_text = remover(text["sentence"])
 print(transform_text)
+
+cv = CountVectorizer(ngram_range=(1,2))
+X = cv.fit_transform(list)
+y = text.feelings
+parameters = {"max_features":("auto", "sqrt"),
+              "n_estimaters":[500, 1000, 1500],
+              "max_depth":[5, 10, None],
+              "min_samples_leaf":[1, 2, 5, 10],
+              "bootstrap":[True, False]}
+               
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+
+grid = GridSearchCV(RandomForestClassifier(), parameters, cv=5, return_train_score=True, n_jobs=-1)
+grid.fit(X, y)
+
+test = pd.read_csv("Data/DataScience/KNN/test.txt", delimiter=";", names=["sentence", "feelings"])
+X_test, y_test = test.sentence, test.feelings
+y_test = emotions(y_test)
+X_test = remover(X_test)
+X_test = cv.transform(X_test, y_test)
+y_predict = grid.predict(X_test)
+from sklearn.metrics import accuracy_score, classification_report
+score = accuracy_score(y_test, y_predict)
+print(score)
